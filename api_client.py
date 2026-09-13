@@ -8,7 +8,7 @@ def get_weather_forecast(lat=config.LATITUD, lon=config.LONGITUD):
         f"latitude={lat}&longitude={lon}"
         f"&hourly=precipitation,temperature_2m,relative_humidity_2m,soil_moisture_0_to_7cm"
         f"&past_days=1"      # <--- Toma la lluvia de las últimas 24 horas (captura la crecida)
-        f"&forecast_days=4"  # Pronóstico a 3 días
+        f"&forecast_days=2"  # Pronóstico a 3 días
         f"&timezone=auto"
     )
     response = requests.get(url)
