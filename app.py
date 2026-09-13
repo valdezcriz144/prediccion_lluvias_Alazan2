@@ -97,11 +97,11 @@ try:
     # =========================================================================
     # MODIFICACIÓN: DESPLAZAMIENTO DE 2 HORAS EN LA PRECIPITACIÓN (LAG HIDROLÓGICO)
     # =========================================================================
-    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(2, fill_value=0.0)
+    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(3, fill_value=0.0)
 
     # Proyección de caudal basada en el promedio histórico + efecto de precipitación desplazada 2 horas
     df_pred["caudal_estimado"] = np.clip(
-        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.35),
+        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.4),
         0.0,
         config.CAUDAL_MAX_DISEÑO,
     )
