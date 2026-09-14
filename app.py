@@ -94,24 +94,20 @@ try:
         df_pred["dia_semana_idx"].map(perfil_dia).fillna(q_promedio_global)
     )
 
-    # =========================================================================
-    # MODIFICACIÓN: DESPLAZAMIENTO DE 3 HORAS EN LA PRECIPITACIÓN (LAG HIDROLÓGICO)
-    # =========================================================================
-    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(3, fill_value=0.0)
+    # --- DESPLAZAMIENTO DE 2 HORAS EN LA PRECIPITACIÓN (LAG HIDROLÓGICO) Y FACTOR 0.4 ---
+    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(2, fill_value=0.0)
 
-    # Proyección de caudal basada en el promedio histórico + efecto de precipitación desplazada 3 horas
     df_pred["caudal_estimado"] = np.clip(
-        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.3),
+        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.4),
         0.0,
         config.CAUDAL_MAX_DISEÑO,
     )
-    # =========================================================================
 
     # Cálculo de potencia descontando caudal ecológico e interpolando con curva SCADA
     potencias = []
     caudales_turbinados = []
     for q in df_pred["caudal_estimado"]:
-        q_disponible = max(0.0, q - 0.0)
+        q_disponible = max(0.0, q - 0.015)
         q_turbinado = min(q_disponible, config.CAUDAL_MAX_DISEÑO)
         caudales_turbinados.append(q_turbinado)
 
@@ -128,6 +124,7 @@ try:
     df_pred["potencia_estimada_mw"] = potencias
 
     q_max = df_pred["caudal_estimado"].max()
+    pot_actual = df_pred["potencia_estimada_mw"].iloc[0]  # Potencia para la hora actual
     pot_max = df_pred["potencia_estimada_mw"].max()
     q_promedio_horizonte = df_pred["q_base_historico"].mean()
 
@@ -150,8 +147,8 @@ try:
         ),
     )
 
-    # --- TARJETAS DE MÉTRICAS CLAVE ---
-    col1, col2, col3, col4 = st.columns(4)
+    # --- TARJETAS DE MÉTRICAS CLAVE (AHORA EN 5 COLUMNAS) ---
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric(
@@ -166,6 +163,9 @@ try:
         st.metric(label="Caudal Máx. Captado", value=f"{q_max:.3f} m³/s")
 
     with col4:
+        st.metric(label="Potencia Hora Actual", value=f"{pot_actual:.3f} MW")
+
+    with col5:
         st.metric(label="Potencia Máx. Proyectada", value=f"{pot_max:.3f} MW")
 
     st.markdown("---")
@@ -206,6 +206,39 @@ try:
         )
         fig_q.update_layout(yaxis_range=[0, 4.5])
         st.plotly_chart(fig_q, use_container_width=True)
+
+    # --- TABLA DETALLE HORARIO ---
+    st.markdown("---")
+    st.subheader("📋 Detalle Horario de Potencia Proyectada")
+
+    df_horario = df_pred[[
+        "fecha_hora", 
+        "lluvia_mm", 
+        "caudal_estimado", 
+        "caudal_turbinado_m3s", 
+        "potencia_estimada_mw"
+    ]].copy()
+
+    df_horario["fecha_hora"] = pd.to_datetime(df_horario["fecha_hora"]).dt.strftime("%Y-%m-%d %H:00")
+
+    df_horario.columns = [
+        "Fecha / Hora", 
+        "Precipitación (mm/h)", 
+        "Caudal Captado (m³/s)", 
+        "Caudal Turbinado (m³/s)", 
+        "Potencia Generada (MW)"
+    ]
+
+    st.dataframe(
+        df_horario.style.format({
+            "Precipitación (mm/h)": "{:.2f}",
+            "Caudal Captado (m³/s)": "{:.3f}",
+            "Caudal Turbinado (m³/s)": "{:.3f}",
+            "Potencia Generada (MW)": "{:.3f}"
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
 
 except Exception as e:
     st.error(f"Error al cargar las predicciones: {e}")
