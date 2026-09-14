@@ -6,13 +6,17 @@ FILE_RAW = os.path.join(BASE_DIR, "Consolidado_Sala_Control.xlsx")
 FILE_CONSOLIDADO = os.path.join(BASE_DIR, "Consolidado_Filtrado.xlsx")
 FILE_MODELO = os.path.join(BASE_DIR, "modelo_alazan.json")
 
-# Punto 1: Captación / Cuenca alta
-LATITUD_1 = -2.517264
-LONGITUD_1 = -78.696058
+# Punto 1:  Cuenca alta rio
+LATITUD_1 = -2.508294
+LONGITUD_1 = -78.907798
 
-# Punto 2: Casa de Máquinas / Cuenca baja
-LATITUD_2 = -2.553900
-LONGITUD_2 = -78.928600
+# Punto 2:  punto intermedio
+LATITUD_2 = -2.526605
+LONGITUD_2 = -78.681215
+
+# Punto 3 Captacion  
+LATITUD_3 = -2.548488
+LONGITUD_3 = -78.669119
 
 POTENCIA_MAX_PERMITIDA_MW = 6.23
 CAUDAL_MAX_DISEÑO = 3.44
