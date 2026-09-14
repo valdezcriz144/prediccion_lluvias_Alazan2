@@ -22,7 +22,7 @@ st_autorefresh(interval=300000, key="datarefresh_5min")
 
 @st.cache_data(ttl=600)
 def cargar_datos_historicos():
-    """Carga el dataset y calcula el caudal promedio histórico según el día de la semana de la matriz de entrenamiento."""
+    """Carga el dataset y calcula el caudal promedio histórico según el día de la semana."""
     if os.path.exists(config.FILE_CONSOLIDADO):
         df = pd.read_excel(config.FILE_CONSOLIDADO)
         col_q = next(
@@ -65,7 +65,6 @@ def cargar_modelo():
 st.title("⚡ Predicción de Generación Hídrica - Central Alazán")
 st.markdown("---")
 
-# Cargar datos y perfil diario histórico de la matriz
 perfil_dia, q_promedio_global = cargar_datos_historicos()
 modelo = cargar_modelo()
 
@@ -83,26 +82,27 @@ horizonte = st.sidebar.number_input(
 try:
     df_clima = get_weather_forecast()
 
-    # Filtrar horizonte seleccionado
     df_pred = df_clima.head(horizonte).copy()
-
     lluvia_max = df_pred["lluvia_mm"].max()
 
-    # Mapear el caudal promedio histórico según el día de la semana correspondiente en la matriz
     df_pred["fecha_hora_dt"] = pd.to_datetime(df_pred["fecha_hora"])
     df_pred["dia_semana_idx"] = df_pred["fecha_hora_dt"].dt.dayofweek
     df_pred["q_base_historico"] = (
         df_pred["dia_semana_idx"].map(perfil_dia).fillna(q_promedio_global)
     )
 
-    # --- DESPLAZAMIENTO EN PRECIPITACIÓN Y FACTOR DE ESCORRENTÍA ---
+    # --- DESPLAZAMIENTO EN PRECIPITACIÓN Y SUAVIZADO DE INERCIA ---
     df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(1, fill_value=0.0)
 
-    df_pred["caudal_estimado"] = np.clip(
+    # 1. Caudal bruto preliminar
+    caudal_bruto = np.clip(
         df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.35),
         0.0,
         config.CAUDAL_MAX_DISEÑO,
     )
+
+    # 2. Suavizado exponencial para amortiguar saltos bruscos entre horas (Inercia hidrológica)
+    df_pred["caudal_estimado"] = caudal_bruto.ewm(span=3, adjust=False).mean()
 
     # Cálculo de potencia descontando caudal ecológico e interpolando con curva SCADA
     potencias = []
@@ -128,28 +128,21 @@ try:
     pot_max = df_pred["potencia_estimada_mw"].max()
     q_promedio_horizonte = df_pred["q_base_historico"].mean()
 
-    # =========================================================================
-    # CORRECCIÓN: SINCRONIZACIÓN EXACTA DE POTENCIA CON LA HORA DE ECUADOR (UTC-5)
-    # =========================================================================
+    # --- SINCRONIZACIÓN DE HORA ACTUAL (ECUADOR UTC-5) ---
     ahora_ec = pd.Timestamp.utcnow() - pd.Timedelta(hours=5)
-    
-    # Buscar el registro que coincide con la hora actual en Ecuador
     df_hora_actual = df_pred[df_pred["fecha_hora_dt"].dt.hour == ahora_ec.hour]
 
     if not df_hora_actual.empty:
         pot_actual = df_hora_actual["potencia_estimada_mw"].iloc[0]
         hora_actual_str = pd.to_datetime(df_hora_actual["fecha_hora"].iloc[0]).strftime("%H:00")
     else:
-        # Si no hay coincidencia directa, toma el primer punto
         pot_actual = df_pred["potencia_estimada_mw"].iloc[0]
         hora_actual_str = pd.to_datetime(df_pred["fecha_hora"].iloc[0]).strftime("%H:00")
-    # =========================================================================
 
-    # --- SECCIÓN DE EXPORTACIÓN EN LA BARRA LATERAL ---
+    # --- EXPORTACIÓN A EXCEL ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("📥 Exportar Resultados")
 
-    # Generar archivo Excel en memoria
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         df_pred.to_excel(writer, index=False, sheet_name="Predicciones_Alazan")
@@ -158,13 +151,11 @@ try:
     st.sidebar.download_button(
         label="📊 Descargar Predicción a Excel",
         data=buffer,
-        file_name="prediccion_hidorica_alazan.xlsx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        ),
+        file_name="prediccion_hidrica_alazan.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-    # --- TARJETAS DE MÉTRICAS CLAVE ---
+    # --- TARJETAS DE MÉTRICAS ---
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
@@ -190,7 +181,7 @@ try:
 
     st.markdown("---")
 
-    # --- GRÁFICAS DE PROYECCIÓN ---
+    # --- GRÁFICAS ---
     st.subheader("📈 Proyección Hidrológica y de Generación")
 
     g_col1, g_col2 = st.columns(2)
@@ -227,7 +218,7 @@ try:
         fig_q.update_layout(yaxis_range=[0, 4.5])
         st.plotly_chart(fig_q, use_container_width=True)
 
-    # --- TABLA DETALLE HORARIO ---
+    # --- TABLA DETALLE ---
     st.markdown("---")
     st.subheader("📋 Detalle Horario de Potencia Proyectada")
 
