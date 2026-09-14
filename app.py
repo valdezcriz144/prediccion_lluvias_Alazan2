@@ -124,11 +124,7 @@ try:
     df_pred["potencia_estimada_mw"] = potencias
 
     q_max = df_pred["caudal_estimado"].max()
-    
-    # --- OBTENER POTENCIA DE LA PRIMERA HORA Y LA HORA ACTUAL DEL SISTEMA EN TIEMPO REAL ---
-    pot_actual = df_pred["potencia_estimada_mw"].iloc[0]
-    hora_actual_str = pd.Timestamp.now().strftime("%H:%M")  # Hora del momento exacto
-    
+    pot_actual = df_pred["potencia_estimada_mw"].iloc[0]  # Potencia para la hora actual
     pot_max = df_pred["potencia_estimada_mw"].max()
     q_promedio_horizonte = df_pred["q_base_historico"].mean()
 
@@ -151,7 +147,7 @@ try:
         ),
     )
 
-    # --- TARJETAS DE MÉTRICAS CLAVE ---
+    # --- TARJETAS DE MÉTRICAS CLAVE (AHORA EN 5 COLUMNAS) ---
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
@@ -167,10 +163,7 @@ try:
         st.metric(label="Caudal Máx. Captado", value=f"{q_max:.3f} m³/s")
 
     with col4:
-        st.metric(
-            label=f"Potencia Hora ({hora_actual_str})", 
-            value=f"{pot_actual:.3f} MW"
-        )
+        st.metric(label="Potencia Hora Actual", value=f"{pot_actual:.3f} MW")
 
     with col5:
         st.metric(label="Potencia Máx. Proyectada", value=f"{pot_max:.3f} MW")
