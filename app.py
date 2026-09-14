@@ -89,12 +89,13 @@ try:
     lluvia_max = df_pred["lluvia_mm"].max()
 
     # Mapear el caudal promedio histórico según el día de la semana correspondiente en la matriz
-    df_pred["dia_semana_idx"] = pd.to_datetime(df_pred["fecha_hora"]).dt.dayofweek
+    df_pred["fecha_hora_dt"] = pd.to_datetime(df_pred["fecha_hora"])
+    df_pred["dia_semana_idx"] = df_pred["fecha_hora_dt"].dt.dayofweek
     df_pred["q_base_historico"] = (
         df_pred["dia_semana_idx"].map(perfil_dia).fillna(q_promedio_global)
     )
 
-    # --- DESPLAZAMIENTO DE 2 HORAS EN LA PRECIPITACIÓN (LAG HIDROLÓGICO) Y FACTOR 0.4 ---
+    # --- DESPLAZAMIENTO EN PRECIPITACIÓN Y FACTOR DE ESCORRENTÍA ---
     df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(1, fill_value=0.0)
 
     df_pred["caudal_estimado"] = np.clip(
@@ -124,9 +125,25 @@ try:
     df_pred["potencia_estimada_mw"] = potencias
 
     q_max = df_pred["caudal_estimado"].max()
-    pot_actual = df_pred["potencia_estimada_mw"].iloc[0]  # Potencia para la hora actual
     pot_max = df_pred["potencia_estimada_mw"].max()
     q_promedio_horizonte = df_pred["q_base_historico"].mean()
+
+    # =========================================================================
+    # CORRECCIÓN: SINCRONIZACIÓN EXACTA DE POTENCIA CON LA HORA DE ECUADOR (UTC-5)
+    # =========================================================================
+    ahora_ec = pd.Timestamp.utcnow() - pd.Timedelta(hours=5)
+    
+    # Buscar el registro que coincide con la hora actual en Ecuador
+    df_hora_actual = df_pred[df_pred["fecha_hora_dt"].dt.hour == ahora_ec.hour]
+
+    if not df_hora_actual.empty:
+        pot_actual = df_hora_actual["potencia_estimada_mw"].iloc[0]
+        hora_actual_str = pd.to_datetime(df_hora_actual["fecha_hora"].iloc[0]).strftime("%H:00")
+    else:
+        # Si no hay coincidencia directa, toma el primer punto
+        pot_actual = df_pred["potencia_estimada_mw"].iloc[0]
+        hora_actual_str = pd.to_datetime(df_pred["fecha_hora"].iloc[0]).strftime("%H:00")
+    # =========================================================================
 
     # --- SECCIÓN DE EXPORTACIÓN EN LA BARRA LATERAL ---
     st.sidebar.markdown("---")
@@ -147,7 +164,7 @@ try:
         ),
     )
 
-    # --- TARJETAS DE MÉTRICAS CLAVE (AHORA EN 5 COLUMNAS) ---
+    # --- TARJETAS DE MÉTRICAS CLAVE ---
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
@@ -163,7 +180,10 @@ try:
         st.metric(label="Caudal Máx. Captado", value=f"{q_max:.3f} m³/s")
 
     with col4:
-        st.metric(label="Potencia Hora Actual", value=f"{pot_actual:.3f} MW")
+        st.metric(
+            label=f"Potencia Hora ({hora_actual_str})", 
+            value=f"{pot_actual:.3f} MW"
+        )
 
     with col5:
         st.metric(label="Potencia Máx. Proyectada", value=f"{pot_max:.3f} MW")
