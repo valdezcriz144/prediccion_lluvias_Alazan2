@@ -193,7 +193,7 @@ try:
 
     with col4:
         st.metric(
-            label=f"Potencia Hora ({hora_actual_str})", 
+            label=f"Potencia Hora", 
             value=f"{pot_actual:.3f} MW"
         )
 
