@@ -32,8 +32,8 @@ def get_weather_forecast():
     """
     # 1. Consultar los 3 puntos
     df1 = fetch_point_forecast(config.LATITUD_1, config.LONGITUD_1)  # Alta / Captación
-    df_media = fetch_point_forecast(config.LATITUD_3, config.LONGITUD_3)  # Media / Intermedio
-    df2 = fetch_point_forecast(config.LATITUD_2, config.LONGITUD_2)  # Baja / Central
+    df_media = fetch_point_forecast(config.LATITUD_2, config.LONGITUD_2)  # Media / Intermedio
+    df2 = fetch_point_forecast(config.LATITUD_3, config.LONGITUD_3)  # Baja / Central
 
     # 2. Copiar estructura
     df_promedio = df1.copy()
