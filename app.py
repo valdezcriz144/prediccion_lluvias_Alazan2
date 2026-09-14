@@ -144,18 +144,19 @@ try:
     q_promedio_horizonte = df_pred["q_base_historico"].mean()
 
     # =========================================================================
-    # CORRECCIÓN: BÚSQUEDA DE LA POTENCIA DE LA HORA ACTUAL EN EL DATAFRAME
+    # CORRECCIÓN DE ZONA HORARIA (ECUADOR UTC-5) Y BÚSQUEDA EXACTA EN EL DATAFRAME
     # =========================================================================
-    ahora = pd.Timestamp.now()
-    hora_actual_str = ahora.strftime("%H:00")
+    ahora_ec = pd.Timestamp.utcnow() - pd.Timedelta(hours=5)
     
-    # Filtrar el DataFrame por la hora actual exactas
-    df_hora_actual = df_pred[df_pred["fecha_hora_dt"].dt.hour == ahora.hour]
+    # Filtrar el registro correspondiente a la hora actual de Ecuador
+    df_hora_actual = df_pred[df_pred["fecha_hora_dt"].dt.hour == ahora_ec.hour]
     
     if not df_hora_actual.empty:
         pot_actual = df_hora_actual["potencia_estimada_mw"].iloc[0]
+        hora_actual_str = pd.to_datetime(df_hora_actual["fecha_hora"].iloc[0]).strftime("%H:00")
     else:
         pot_actual = df_pred["potencia_estimada_mw"].iloc[0]
+        hora_actual_str = pd.to_datetime(df_pred["fecha_hora"].iloc[0]).strftime("%H:00")
     # =========================================================================
 
     # --- SECCIÓN DE EXPORTACIÓN EN LA BARRA LATERAL ---
