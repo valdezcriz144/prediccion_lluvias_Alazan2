@@ -6,8 +6,8 @@ FILE_RAW = os.path.join(BASE_DIR, "Consolidado_Sala_Control.xlsx")
 FILE_CONSOLIDADO = os.path.join(BASE_DIR, "Consolidado_Filtrado.xlsx")
 FILE_MODELO = os.path.join(BASE_DIR, "modelo_alazan.json")
 
-LATITUD = -2.538169
-LONGITUD = -78.675608
+LATITUD = -2.517264
+LONGITUD = -78.696058
 
 #LATITUD = -2.5539
 #LONGITUD = -78.9286
