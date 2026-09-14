@@ -98,7 +98,7 @@ try:
     df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(2, fill_value=0.0)
 
     df_pred["caudal_estimado"] = np.clip(
-        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.4),
+        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.35),
         0.0,
         config.CAUDAL_MAX_DISEÑO,
     )
@@ -107,7 +107,7 @@ try:
     potencias = []
     caudales_turbinados = []
     for q in df_pred["caudal_estimado"]:
-        q_disponible = max(0.0, q - 0.15)
+        q_disponible = max(0.0, q - 0.1)
         q_turbinado = min(q_disponible, config.CAUDAL_MAX_DISEÑO)
         caudales_turbinados.append(q_turbinado)
 
