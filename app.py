@@ -96,13 +96,13 @@ try:
 
     # 1. Caudal bruto preliminar
     caudal_bruto = np.clip(
-        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.35),
+        df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.38),
         0.0,
         config.CAUDAL_MAX_DISEÑO,
     )
 
     # 2. Suavizado exponencial para amortiguar saltos bruscos entre horas (Inercia hidrológica)
-    df_pred["caudal_estimado"] = caudal_bruto.ewm(span=3, adjust=False).mean()
+    df_pred["caudal_estimado"] = caudal_bruto.ewm(span=4, adjust=False).mean()
 
     # Cálculo de potencia descontando caudal ecológico e interpolando con curva SCADA
     potencias = []
