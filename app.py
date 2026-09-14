@@ -95,7 +95,7 @@ try:
     )
 
     # --- DESPLAZAMIENTO DE 2 HORAS EN LA PRECIPITACIÓN (LAG HIDROLÓGICO) Y FACTOR 0.4 ---
-    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(2, fill_value=0.0)
+    df_pred["lluvia_mm_desplazada"] = df_pred["lluvia_mm"].shift(1, fill_value=0.0)
 
     df_pred["caudal_estimado"] = np.clip(
         df_pred["q_base_historico"] + (df_pred["lluvia_mm_desplazada"] * 0.35),
