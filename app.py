@@ -102,7 +102,7 @@ try:
     )
 
     # 2. Suavizado exponencial para amortiguar saltos bruscos entre horas (Inercia hidrológica)
-    df_pred["caudal_estimado"] = caudal_bruto.ewm(span=4, adjust=False).mean()
+    df_pred["caudal_estimado"] = caudal_bruto.ewm(span=3, adjust=False).mean()
 
     # Cálculo de potencia descontando caudal ecológico e interpolando con curva SCADA
     potencias = []
