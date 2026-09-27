@@ -108,7 +108,7 @@ try:
     potencias = []
     caudales_turbinados = []
     for q in df_pred["caudal_estimado"]:
-        q_disponible = max(0.0, q - 0.01)
+        q_disponible = max(0.0, q - 0.39)
         q_turbinado = min(q_disponible, config.CAUDAL_MAX_DISEÑO)
         caudales_turbinados.append(q_turbinado)
 

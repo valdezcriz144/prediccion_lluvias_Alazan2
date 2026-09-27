@@ -1,0 +1,84 @@
+import pandas as pd
+
+
+def procesar_estacion_cruda(
+    filepath="Estación pluviométrica_Alazán - copia.xlsx",
+):
+    print("Cargando y limpiando datos crudos de la estación...")
+    df = pd.read_excel(filepath, sheet_name="Datos")
+
+    # 1. Estandarización de marca temporal (ISO YYYY-MM-DD HH:MM:SS)
+    df["fecha_str"] = pd.to_datetime(df["Fecha (dd/mm/aa)"]).dt.strftime(
+        "%Y-%m-%d"
+    )
+    df["hora_str"] = (
+        df["Hora (hh:mm:ss)"].astype(str).str.split(":").str[0].str.zfill(2)
+        + ":00:00"
+    )
+    df["fecha_hora"] = pd.to_datetime(df["fecha_str"] + " " + df["hora_str"])
+
+    # 2. Mapeo de columnas esenciales
+    cols_map = {
+        "fecha_hora": "fecha_hora",
+        "Precipitación (mm)": "precipitacion_mm",
+        "Tem. Promedio (°C)": "temp_promedio_c",
+        "Hum. Promedio (%)": "humedad_promedio_pct",
+        "Veloc. Promedio (m/s)": "veloc_viento_ms",
+        "Voltaje. External_DC": "voltaje_dc",
+    }
+
+    df_clean = df[list(cols_map.keys())].rename(columns=cols_map)
+    df_clean = df_clean.sort_values("fecha_hora").reset_index(drop=True)
+
+    # 3. Feature Engineering: Inercia Hidrológica (Ventanas Acumuladas)
+    df_clean["lluvia_acum_3h"] = (
+        df_clean["precipitacion_mm"].rolling(3, min_periods=1).sum()
+    )
+    df_clean["lluvia_acum_6h"] = (
+        df_clean["precipitacion_mm"].rolling(6, min_periods=1).sum()
+    )
+    df_clean["lluvia_acum_12h"] = (
+        df_clean["precipitacion_mm"].rolling(12, min_periods=1).sum()
+    )
+    df_clean["lluvia_acum_24h"] = (
+        df_clean["precipitacion_mm"].rolling(24, min_periods=1).sum()
+    )
+
+    # 4. Retardos temporales (Lags)
+    df_clean["lluvia_lag_1h"] = df_clean["precipitacion_mm"].shift(1)
+    df_clean["lluvia_lag_2h"] = df_clean["precipitacion_mm"].shift(2)
+    df_clean["lluvia_lag_3h"] = df_clean["precipitacion_mm"].shift(3)
+
+    # Relleno de nulos iniciales generados por la ventana de desplaza
+    df_clean = df_clean.fillna(0)
+
+    print(
+        f"Procesamiento finalizado: {len(df_clean)} registros limpios y"
+        " estructurados."
+    )
+    return df_clean
+
+
+def cruzar_con_scada(
+    scada_filepath="Consolidado_Filtrado.xlsx",
+    estacion_filepath="Estación pluviométrica_Alazán - copia.xlsx",
+):
+    df_estacion = procesar_estacion_cruda(estacion_filepath)
+
+    print("Cargando registros históricos del SCADA...")
+    df_scada = pd.read_excel(scada_filepath)
+    df_scada["fecha_hora"] = pd.to_datetime(df_scada["fecha_hora"])
+
+    # Cruce por coincidencia temporal exacta
+    print("Unificando SCADA con datos procesados de pluviometría...")
+    df_merged = pd.merge(df_scada, df_estacion, on="fecha_hora", how="inner")
+
+    df_merged.to_csv("dataset_entrenamiento_alazan.csv", index=False)
+    print(
+        "Archivo 'dataset_entrenamiento_alazan.csv' actualizado y listo para"
+        " XGBoost."
+    )
+
+
+if __name__ == "__main__":
+    cruzar_con_scada()
